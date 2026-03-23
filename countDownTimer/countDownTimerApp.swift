@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct countDownTimerApp: App {
-    let timer: CountDownLogic = CountDownLogic()
+    let timer = CountDownLogic()
     var body: some Scene {
         WindowGroup {
             ContentView()
