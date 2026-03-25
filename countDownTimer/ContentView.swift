@@ -18,13 +18,15 @@ class CountDownLogic {
     var displayTime: String {
         return String(format: "%02d:%02d", minors, sec)
     }
-    
+    var totalSec: Int = 0
     
     func startTimer() {
         if minors == 0 && sec == 0 {
             minors = 1
             sec = 59
         }
+        totalSec = (60 * minors) + sec
+        
         if isRunning {
             timer = Timer
                 .scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
@@ -35,7 +37,6 @@ class CountDownLogic {
                         self.minors -= 1
                     } else {
                         self.pauseTimer()
-                        self.isRunning.toggle()
                     }
                 }
         }
@@ -50,45 +51,84 @@ class CountDownLogic {
         sec = 0
         pauseTimer()
     }
+    
+    var progress: Double {
+        guard totalSec > 0 else {return 1.0}
+        let remaining = (60 * minors) + sec
+        return Double(remaining) / Double(totalSec)
+    }
 }
 
 struct ContentView: View {
     @Environment(CountDownLogic.self) private var timer
     var body: some View {
         @Bindable var timeCook = timer
-
-        TabView {
-            Tab.init("Clock", systemImage: "clock.fill") {
-                
-            }
+        ZStack {
             
-            Tab.init("Alarm", systemImage: "alarm.waves.left.and.right.fill") {
-                
-            }
-            
-            Tab.init("FastTrack", systemImage: "hare.fill") {
-                ZStack{
-                    HStack{
-                        CountDownView(
-                            value: $timeCook.minors,
-                            range: 0..<60,
-                            title: "Minutes"
-                        )
+            TabView {
+                Tab.init("Clock", systemImage: "clock.fill") {
                     
-                        CountDownView(
-                            value: $timeCook.sec,
-                            range: 0..<60,
-                            title: "Seconds"
-                        )
-                    }
-                    TimeController()
-                        .frame(
-                            maxWidth: .infinity,
-                            maxHeight: .infinity,
-                            alignment: .bottom
-                        )
                 }
-                .navigationTitle("CountDown")
+                
+                Tab.init(
+                    "Alarm",
+                    systemImage: "alarm.waves.left.and.right.fill"
+                ) {
+                    
+                }
+                
+                Tab.init("FastTrack", systemImage: "hare.fill") {
+                    NavigationStack {
+                        ZStack {
+                            Rectangle()
+                                .fill(.red.gradient)
+                                .brightness(-0.3)
+                                .scaleEffect(x: 1, y: timer.progress, anchor: .bottom)
+                                .animation(
+                                    .spring(response: 0.7, dampingFraction: 0.7, blendDuration: 0.7),
+                                    value: timer.progress
+                                )
+                                .frame(
+                                    maxWidth: .infinity,
+                                    maxHeight: .infinity,
+                                    alignment: .bottom
+                                )
+                                .blur(radius: 3)
+                            HStack{
+                                CountDownView(
+                                    value: $timeCook.minors,
+                                    range: 0..<60,
+                                    title: "Minutes"
+                                )
+                                
+                                CountDownView(
+                                    value: $timeCook.sec,
+                                    range: 0..<60,
+                                    title: "Seconds"
+                                )
+                            }
+                            .padding(.bottom, 30)
+                            .padding(.horizontal, 15)
+                            .frame(
+                                maxWidth: .infinity,
+                                maxHeight: .infinity,
+                                alignment: .center
+                            )
+//                            .background(.ultraThinMaterial.quaternary, in: .rect(cornerRadius: 56, style: .continuous))
+                            
+                            
+                            TimeController()
+                                .frame(
+                                    maxWidth: .infinity,
+                                    maxHeight: .infinity,
+                                    alignment: .bottom
+                                )
+                                .offset(x: 0, y: -96)
+                        }
+                        .ignoresSafeArea()
+                        .navigationTitle("CountDown")
+                    }
+                }
             }
         }
     }
@@ -111,8 +151,9 @@ struct CountDownView: View {
                             .tag(value)
                     }
                 }
-                .frame(width: 120)
                 .pickerStyle(.wheel)
+                .padding()
+                .frame(maxWidth: 120)
                 .disabled(timer.isRunning)
                 Text(title)
                     .font(.title3.weight(.medium))
@@ -120,7 +161,6 @@ struct CountDownView: View {
                     .background(.clear)
             }
         }
-        .navigationTitle("CountDown")
     }
 }
 
@@ -134,21 +174,23 @@ struct TimeController: View {
                 }
             } label: {
                 Image(
-                    systemName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill"
+                    systemName: "arrow.trianglehead.2.clockwise.rotate.90"
                 )
                 .resizable()
                 .scaledToFit()
-                .foregroundStyle(Color(UIColor.systemBackground))
-                .background(
-                    Circle()
-                        .fill(Color(UIColor.systemRed))
-                        .shadow(color: .black.opacity(0.25), radius: 10)
-                        .padding(1)
+                .fontWeight(.heavy)
+                .foregroundStyle(
+                    !timer.isRunning ? Color(UIColor.label) : Color(
+                        UIColor.secondaryLabel
+                    )
                 )
+                .frame(maxWidth: 35, maxHeight: 35)
             }
-            .frame(maxWidth: 55, maxHeight: 55)
-            .buttonStyle(.borderless)
-            .padding(12)
+            .frame(maxWidth: 60, maxHeight: 60)
+            .glassEffect(.clear.interactive(), in: .circle)
+            .padding(20)
+            .disabled(timer.isRunning)
+            
             
             if timer.isRunning{
                 Button {
@@ -156,21 +198,20 @@ struct TimeController: View {
                         timer.pauseTimer()
                     }
                 } label: {
-                    Image(systemName: "pause.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(Color(UIColor.systemBackground))
-                        .background(
-                            Circle()
-                                .fill(Color(UIColor.secondaryLabel))
-                                .shadow(color: .black.opacity(0.25), radius: 10)
-                                .padding(1)
-                        )
+                    Image(
+                        systemName: "pause.fill"
+                    )
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(Color(UIColor.label))
+                    .frame(maxWidth: 30, maxHeight: 30)
                 }
-                .frame(maxWidth: 55, maxHeight: 55)
-                .buttonStyle(.borderless)
-                .padding(12)
+                .frame(maxWidth: 60, maxHeight: 60)
+                .glassEffect(.clear.interactive(), in: .circle)
+                .padding(20)
+                .clipShape(.circle)
             }
+                
             else {
                 Button {
                     withAnimation(.bouncy) {
@@ -180,30 +221,26 @@ struct TimeController: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "play.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(Color(UIColor.systemBackground))
-                        .background(
-                            Circle()
-                                .fill(Color(UIColor.systemBlue))
-                                .shadow(color: .black.opacity(0.25), radius: 10)
-                                .padding(1)
-                        )
+                    Image(
+                        systemName: "play.fill"
+                    )
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(Color(UIColor.label))
+                    .frame(maxWidth: 30, maxHeight: 30)
+                    .padding(.leading, 5)
                 }
-                .frame(maxWidth: 55, maxHeight: 55)
-                .buttonStyle(.borderless)
-                .padding(12)
+                .frame(maxWidth: 60, maxHeight: 60)
+                .glassEffect(.clear.interactive(), in: .circle)
+                .padding(20)
             }
         }
-        .frame(maxWidth: 200, maxHeight: 100)
-        
+        .shadow(color: .black.opacity(0.08), radius: 10)
+        .frame(maxWidth: 200, maxHeight: 100, alignment: .bottom)
     }
 }
 
 #Preview {
-    NavigationStack {
-        ContentView()
-    }
-    .environment(CountDownLogic())
+    ContentView()
+        .environment(CountDownLogic())
 }
