@@ -19,6 +19,7 @@ class CountDownLogic {
         return String(format: "%02d:%02d", minors, sec)
     }
     var totalSec: Int = 0
+    var remaining: Int = 0
     
     func startTimer() {
         if minors == 0 && sec == 0 {
@@ -26,6 +27,7 @@ class CountDownLogic {
             sec = 59
         }
         totalSec = (60 * minors) + sec
+        remaining = totalSec
         
         if isRunning {
             timer = Timer
@@ -38,9 +40,11 @@ class CountDownLogic {
                     } else {
                         self.pauseTimer()
                     }
+                    self.remaining = (60 * self.minors) + self.sec
                 }
         }
     }
+    
     func pauseTimer() {
         isRunning = false
         timer?.invalidate()
@@ -54,7 +58,6 @@ class CountDownLogic {
     
     var progress: Double {
         guard totalSec > 0 else {return 1.0}
-        let remaining = (60 * minors) + sec
         return Double(remaining) / Double(totalSec)
     }
 }
@@ -80,20 +83,13 @@ struct ContentView: View {
                 Tab.init("FastTrack", systemImage: "hare.fill") {
                     NavigationStack {
                         ZStack {
-                            Rectangle()
-                                .fill(.red.gradient)
-                                .brightness(-0.3)
-                                .scaleEffect(x: 1, y: timer.progress, anchor: .bottom)
-                                .animation(
-                                    .spring(response: 0.7, dampingFraction: 0.7, blendDuration: 0.7),
-                                    value: timer.progress
-                                )
+                            SineWave(prog: timer.progress)
+                                .animation(.linear(duration: 1.0), value: timer.progress)
                                 .frame(
                                     maxWidth: .infinity,
                                     maxHeight: .infinity,
                                     alignment: .bottom
                                 )
-                                .blur(radius: 3)
                             HStack{
                                 CountDownView(
                                     value: $timeCook.minors,
@@ -114,8 +110,6 @@ struct ContentView: View {
                                 maxHeight: .infinity,
                                 alignment: .center
                             )
-//                            .background(.ultraThinMaterial.quaternary, in: .rect(cornerRadius: 56, style: .continuous))
-                            
                             
                             TimeController()
                                 .frame(
